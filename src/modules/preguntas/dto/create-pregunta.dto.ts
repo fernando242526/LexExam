@@ -1,1 +1,72 @@
-export class CreatePreguntaDto {}
+import { ApiProperty } from '@nestjs/swagger';
+import { 
+  IsNotEmpty, 
+  IsString, 
+  IsOptional, 
+  IsUUID, 
+  IsEnum, 
+  ValidateNested, 
+  ArrayMinSize,
+  ArrayUnique,
+  IsArray
+} from 'class-validator';
+import { Type } from 'class-transformer';
+import { CreateRespuestaDto } from './create-respuesta.dto';
+import { NivelDificultad } from '../entities/pregunta.entity';
+
+export class CreatePreguntaDto {
+  @ApiProperty({
+    description: 'Texto de la pregunta',
+    example: '¿Cuál es la definición de Constitución?',
+  })
+  @IsNotEmpty({ message: 'El texto de la pregunta es obligatorio' })
+  @IsString({ message: 'El texto debe ser una cadena de texto' })
+  texto: string;
+
+  @ApiProperty({
+    description: 'Explicación adicional de la pregunta (opcional)',
+    example: 'La Constitución es la norma fundamental de un Estado que define su organización política',
+    required: false,
+  })
+  @IsOptional()
+  @IsString({ message: 'La explicación debe ser una cadena de texto' })
+  explicacion?: string;
+
+  @ApiProperty({
+    description: 'Nivel de dificultad de la pregunta',
+    enum: NivelDificultad,
+    default: NivelDificultad.MEDIO,
+    example: NivelDificultad.MEDIO,
+  })
+  @IsOptional()
+  @IsEnum(NivelDificultad, { message: 'El nivel de dificultad debe ser uno válido' })
+  nivelDificultad?: NivelDificultad = NivelDificultad.MEDIO;
+
+  @ApiProperty({
+    description: 'ID del tema al que pertenece la pregunta',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  @IsNotEmpty({ message: 'El ID del tema es obligatorio' })
+  @IsUUID('4', { message: 'El ID del tema debe ser un UUID válido' })
+  temaId: string;
+
+  @ApiProperty({
+    description: 'Lista de posibles respuestas',
+    type: [CreateRespuestaDto],
+    example: [
+      {
+        texto: 'La Constitución es la norma jurídica suprema del Estado',
+        esCorrecta: true
+      },
+      {
+        texto: 'La Constitución es un simple documento político sin valor jurídico',
+        esCorrecta: false
+      }
+    ]
+  })
+  @IsArray({ message: 'Las respuestas deben ser un arreglo' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateRespuestaDto)
+  @ArrayMinSize(2, { message: 'La pregunta debe tener al menos 2 respuestas' })
+  respuestas: CreateRespuestaDto[];
+}

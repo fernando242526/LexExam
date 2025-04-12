@@ -8,9 +8,10 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
-    const { method, url, body, ip } = req;
+    const { method, url, ip } = req;
     const userAgent = req.get('user-agent') || '';
     const userId = req.user?.id || 'anónimo';
+    const body = req.body || {}; // Garantizar que body nunca sea null o undefined
 
     const now = Date.now();
     
@@ -18,7 +19,8 @@ export class LoggingInterceptor implements NestInterceptor {
       `[${method}] ${url} - Usuario: ${userId} - IP: ${ip} - User Agent: ${userAgent}`,
     );
     
-    if (Object.keys(body).length > 0) {
+    // Verificar que body sea un objeto y no esté vacío antes de usar Object.keys
+    if (body && typeof body === 'object' && Object.keys(body).length > 0) {
       this.logger.debug(`Cuerpo de la petición: ${JSON.stringify(body)}`);
     }
 
