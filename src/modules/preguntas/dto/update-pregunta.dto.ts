@@ -6,15 +6,6 @@ import { UpdateRespuestaDto } from './update-respuesta.dto';
 
 export class UpdatePreguntaDto extends PartialType(OmitType(CreatePreguntaDto, ['respuestas'])) {
   @ApiProperty({
-    description: 'Indica si la pregunta está activa',
-    example: true,
-    required: false,
-  })
-  @IsOptional()
-  @IsBoolean({ message: 'El estado activo debe ser un valor booleano' })
-  activo?: boolean;
-
-  @ApiProperty({
     description: 'Lista de respuestas (para actualización)',
     type: [UpdateRespuestaDto],
     required: false,

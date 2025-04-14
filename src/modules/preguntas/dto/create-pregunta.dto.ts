@@ -1,14 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { 
-  IsNotEmpty, 
-  IsString, 
-  IsOptional, 
-  IsUUID, 
-  IsEnum, 
-  ValidateNested, 
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsUUID,
+  IsEnum,
+  ValidateNested,
   ArrayMinSize,
-  ArrayUnique,
-  IsArray
+  IsArray,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { CreateRespuestaDto } from './create-respuesta.dto';
@@ -25,7 +25,8 @@ export class CreatePreguntaDto {
 
   @ApiProperty({
     description: 'Explicación adicional de la pregunta (opcional)',
-    example: 'La Constitución es la norma fundamental de un Estado que define su organización política',
+    example:
+      'La Constitución es la norma fundamental de un Estado que define su organización política',
     required: false,
   })
   @IsOptional()
@@ -43,12 +44,13 @@ export class CreatePreguntaDto {
   nivelDificultad?: NivelDificultad = NivelDificultad.MEDIO;
 
   @ApiProperty({
-    description: 'ID del tema al que pertenece la pregunta',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Indica si la pregunta está activa',
+    example: true,
+    required: false,
   })
-  @IsNotEmpty({ message: 'El ID del tema es obligatorio' })
-  @IsUUID('4', { message: 'El ID del tema debe ser un UUID válido' })
-  temaId: string;
+  @IsOptional()
+  @IsBoolean({ message: 'El estado activo debe ser un valor booleano' })
+  activo?: boolean;
 
   @ApiProperty({
     description: 'Lista de posibles respuestas',
@@ -56,13 +58,13 @@ export class CreatePreguntaDto {
     example: [
       {
         texto: 'La Constitución es la norma jurídica suprema del Estado',
-        esCorrecta: true
+        esCorrecta: true,
       },
       {
         texto: 'La Constitución es un simple documento político sin valor jurídico',
-        esCorrecta: false
-      }
-    ]
+        esCorrecta: false,
+      },
+    ],
   })
   @IsArray({ message: 'Las respuestas deben ser un arreglo' })
   @ValidateNested({ each: true })

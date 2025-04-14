@@ -50,9 +50,6 @@ export class Pregunta {
   @JoinColumn({ name: 'tema_id' })
   tema: Tema;
 
-  @Column({ type: 'uuid' })
-  temaId: string;
-
   @OneToMany(() => Respuesta, (respuesta) => respuesta.pregunta, { cascade: true })
   respuestas: Respuesta[];
 

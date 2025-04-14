@@ -30,9 +30,6 @@ export class Respuesta {
   @JoinColumn({ name: 'pregunta_id' })
   pregunta: Pregunta;
 
-  @Column({ type: 'uuid' })
-  preguntaId: string;
-
   @OneToMany(() => RespuestaUsuario, (respuestaUsuario) => respuestaUsuario.respuesta)
   respuestasUsuarios: RespuestaUsuario[];
 }
