@@ -23,7 +23,7 @@ export class TemasService {
    */
   async create(createTemaDto: CreateTemaDto): Promise<TemaDto> {
     // Verificar que el balotario existe
-    await this.balotariosService.findOne(createTemaDto.balotarioId);
+    await this.balotariosService.findOne(createTemaDto.balotario.id);
     
     // Crear y guardar el nuevo tema
     const tema = this.temaRepository.create(createTemaDto);
@@ -57,7 +57,7 @@ export class TemasService {
     }
 
     if (balotarioId) {
-      where.balotarioId = balotarioId;
+      where.balotario = { id: balotarioId };
     }
 
     if (activo !== undefined) {
@@ -113,7 +113,7 @@ export class TemasService {
     const where: FindOptionsWhere<Tema> = { activo: true };
     
     if (balotarioId) {
-      where.balotarioId = balotarioId;
+      where.balotario = { id: balotarioId };
     }
     
     const temas = await this.temaRepository.find({
@@ -137,8 +137,10 @@ export class TemasService {
     }
 
     // Si se cambia el balotario, verificar que existe
-    if (updateTemaDto.balotarioId && updateTemaDto.balotarioId !== tema.balotarioId) {
-      await this.balotariosService.findOne(updateTemaDto.balotarioId);
+    if (updateTemaDto.balotario?.id &&
+      (!tema.balotario || updateTemaDto.balotario.id !== tema.balotario.id)
+    ) {
+      await this.balotariosService.findOne(updateTemaDto.balotario.id);
     }
 
     // Actualizar y guardar

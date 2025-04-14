@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, MaxLength, IsUUID, IsInt, Min } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, MaxLength, IsUUID, IsInt, Min, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateTemaDto {
@@ -35,10 +35,18 @@ export class CreateTemaDto {
   orden?: number;
 
   @ApiProperty({
-    description: 'ID del balotario al que pertenece el tema',
+    description: 'Balotario al que pertenece el tema',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  @IsNotEmpty({ message: 'El ID del balotario es obligatorio' })
-  @IsUUID('4', { message: 'El ID del balotario debe ser un UUID válido' })
-  balotarioId: string;
+  @IsNotEmpty({ message: 'El balotario es obligatorio' })
+  balotario: { id: string};
+
+  @ApiProperty({
+    description: 'Indica si el tema está activo',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El estado activo debe ser un valor booleano' })
+  activo?: boolean;
 }

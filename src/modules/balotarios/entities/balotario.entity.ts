@@ -43,9 +43,6 @@ export class Balotario {
   @JoinColumn({ name: 'especialidad_id' })
   especialidad: Especialidad;
 
-  @Column({ type: 'uuid' })
-  especialidadId: string;
-
   @OneToMany(() => Tema, (tema) => tema.balotario)
   temas: Tema[];
 }
