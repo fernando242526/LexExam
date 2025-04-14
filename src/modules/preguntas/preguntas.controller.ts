@@ -26,27 +26,27 @@ import { CreatePreguntasMasivoDto } from './dto/create-preguntas-masivas.dto';
 export class PreguntasController {
   constructor(private readonly preguntasService: PreguntasService) {}
 
-  @Post()
-  @ApiOperation({
-    summary: 'Crear nueva pregunta',
-    description: 'Crea una nueva pregunta con sus respuestas asociadas a un tema.',
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Pregunta creada exitosamente',
-    type: PreguntaDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Datos inválidos o sin respuestas correctas',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Tema no encontrado',
-  })
-  create(@Body() createPreguntaDto: CreatePreguntaDto): Promise<PreguntaDto> {
-    return this.preguntasService.create(createPreguntaDto);
-  }
+  // @Post()
+  // @ApiOperation({
+  //   summary: 'Crear nueva pregunta',
+  //   description: 'Crea una nueva pregunta con sus respuestas asociadas a un tema.',
+  // })
+  // @ApiResponse({
+  //   status: HttpStatus.CREATED,
+  //   description: 'Pregunta creada exitosamente',
+  //   type: PreguntaDto,
+  // })
+  // @ApiResponse({
+  //   status: HttpStatus.BAD_REQUEST,
+  //   description: 'Datos inválidos o sin respuestas correctas',
+  // })
+  // @ApiResponse({
+  //   status: HttpStatus.NOT_FOUND,
+  //   description: 'Tema no encontrado',
+  // })
+  // create(@Body() createPreguntaDto: CreatePreguntaDto): Promise<PreguntaDto> {
+  //   return this.preguntasService.create(createPreguntaDto);
+  // }
 
   @Post('masivo')
   @ApiOperation({
@@ -140,31 +140,31 @@ export class PreguntasController {
     return this.preguntasService.findOne(id);
   }
 
-  @Patch(':id')
-  @ApiOperation({
-    summary: 'Actualizar pregunta',
-    description: 'Actualiza los datos de una pregunta existente y sus respuestas',
-  })
-  @ApiParam({ name: 'id', description: 'ID de la pregunta' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Pregunta actualizada exitosamente',
-    type: PreguntaDto,
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'Datos inválidos o sin respuestas correctas',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Pregunta no encontrada',
-  })
-  update(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() updatePreguntaDto: UpdatePreguntaDto,
-  ): Promise<PreguntaDto> {
-    return this.preguntasService.update(id, updatePreguntaDto);
-  }
+  // @Patch(':id')
+  // @ApiOperation({
+  //   summary: 'Actualizar pregunta',
+  //   description: 'Actualiza los datos de una pregunta existente y sus respuestas',
+  // })
+  // @ApiParam({ name: 'id', description: 'ID de la pregunta' })
+  // @ApiResponse({
+  //   status: HttpStatus.OK,
+  //   description: 'Pregunta actualizada exitosamente',
+  //   type: PreguntaDto,
+  // })
+  // @ApiResponse({
+  //   status: HttpStatus.BAD_REQUEST,
+  //   description: 'Datos inválidos o sin respuestas correctas',
+  // })
+  // @ApiResponse({
+  //   status: HttpStatus.NOT_FOUND,
+  //   description: 'Pregunta no encontrada',
+  // })
+  // update(
+  //   @Param('id', ParseUUIDPipe) id: string,
+  //   @Body() updatePreguntaDto: UpdatePreguntaDto,
+  // ): Promise<PreguntaDto> {
+  //   return this.preguntasService.update(id, updatePreguntaDto);
+  // }
 
   @Delete(':id')
   @ApiOperation({

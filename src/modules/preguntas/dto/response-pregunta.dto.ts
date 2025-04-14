@@ -37,12 +37,6 @@ export class PreguntaDto {
   tema?: TemaSelectDto;
 
   @ApiProperty({
-    description: 'ID del tema',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  temaId: string;
-
-  @ApiProperty({
     description: 'Lista de respuestas posibles',
     type: [RespuestaDto],
   })
@@ -71,7 +65,6 @@ export class PreguntaDto {
     this.texto = pregunta.texto;
     this.explicacion = pregunta.explicacion;
     this.nivelDificultad = pregunta.nivelDificultad;
-    this.temaId = pregunta.temaId;
     this.activo = pregunta.activo;
     this.createdAt = pregunta.createdAt;
     this.updatedAt = pregunta.updatedAt;

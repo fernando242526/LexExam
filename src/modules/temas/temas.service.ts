@@ -96,7 +96,11 @@ export class TemasService {
   async findOne(id: string): Promise<TemaDto> {
     const tema = await this.temaRepository.findOne({
       where: { id },
-      relations: { balotario: true },
+      relations: { 
+        balotario: {
+          especialidad: true // Incluye la relacion anidada especialidades
+        } 
+      },
     });
 
     if (!tema) {
