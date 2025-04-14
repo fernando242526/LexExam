@@ -35,12 +35,6 @@ export class TemaDto {
   balotario?: BalotarioSelectDto;
 
   @ApiProperty({
-    description: 'ID del balotario',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  balotarioId: string;
-
-  @ApiProperty({
     description: 'Indica si el tema está activo',
     example: true,
   })
@@ -63,7 +57,7 @@ export class TemaDto {
     this.titulo = tema.titulo;
     this.descripcion = tema.descripcion;
     this.orden = tema.orden;
-    this.balotarioId = tema.balotarioId;
+    this.balotario = tema.balotario;
     this.activo = tema.activo;
     this.createdAt = tema.createdAt;
     this.updatedAt = tema.updatedAt;

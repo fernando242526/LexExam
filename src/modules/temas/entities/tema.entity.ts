@@ -38,9 +38,6 @@ export class Tema {
   @JoinColumn({ name: 'balotario_id' })
   balotario: Balotario;
 
-  @Column({ type: 'uuid' })
-  balotarioId: string;
-
   @OneToMany(() => Pregunta, (pregunta) => pregunta.tema)
   preguntas: Pregunta[];
 }

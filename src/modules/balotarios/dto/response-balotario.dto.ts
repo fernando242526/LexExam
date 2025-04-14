@@ -43,12 +43,6 @@ export class BalotarioDto {
   especialidad: EspecialidadSelectDto;
 
   @ApiProperty({
-    description: 'ID de la especialidad',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  especialidadId: string;
-
-  @ApiProperty({
     description: 'Indica si el balotario está activo',
     example: true,
   })
@@ -72,7 +66,7 @@ export class BalotarioDto {
     this.descripcion = balotario.descripcion;
     this.anio = balotario.anio;
     this.institucion = balotario.institucion;
-    this.especialidadId = balotario.especialidadId;
+    this.especialidad = balotario.especialidad;
     this.activo = balotario.activo;
     this.createdAt = balotario.createdAt;
     this.updatedAt = balotario.updatedAt;

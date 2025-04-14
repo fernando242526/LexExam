@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, Query, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
 import { BalotariosService } from './balotarios.service';
-import { BalotarioDto } from './dto/response-balotari.dto';
+import { BalotarioDto } from './dto/response-balotario.dto';
 import { CreateBalotarioDto } from './dto/create-balotario.dto';
 import { PaginatedResponseDto } from 'src/common/dtos/response.dto';
 import { FilterBalotarioDto } from './dto/filter-balotario.dto';

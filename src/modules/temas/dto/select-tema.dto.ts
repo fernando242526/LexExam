@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Tema } from '../entities/tema.entity';
+import { BalotarioSelectDto } from 'src/modules/balotarios/dto/select-balotario.dto';
 
 export class TemaSelectDto {
   @ApiProperty({
@@ -15,14 +16,14 @@ export class TemaSelectDto {
   titulo: string;
 
   @ApiProperty({
-    description: 'ID del balotario',
+    description: 'Balotario al que pertenece el Tema',
     example: '123e4567-e89b-12d3-a456-426614174000',
   })
-  balotarioId: string;
+  balotario: BalotarioSelectDto;
 
   constructor(tema: Tema) {
     this.id = tema.id;
     this.titulo = tema.titulo;
-    this.balotarioId = tema.balotarioId;
+    this.balotario = tema.balotario;
   }
 }

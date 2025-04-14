@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, MaxLength, IsUUID, IsInt, Min, Max } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, MaxLength, IsUUID, IsInt, Min, Max, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateBalotarioDto {
@@ -46,10 +46,18 @@ export class CreateBalotarioDto {
   institucion?: string;
 
   @ApiProperty({
-    description: 'ID de la especialidad a la que pertenece el balotario',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Especialidad a la que pertenece el balotario',
+    example: { id: '123e4567-e89b-12d3-a456-426614174000' },
   })
-  @IsNotEmpty({ message: 'El ID de la especialidad es obligatorio' })
-  @IsUUID('4', { message: 'El ID de la especialidad debe ser un UUID válido' })
-  especialidadId: string;
+  @IsNotEmpty({ message: 'La especialidad es obligatoria' })
+  especialidad: { id: string };
+
+  @ApiProperty({
+    description: 'Indica si el balotario está activo',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El estado activo debe ser un valor booleano' })
+  activo?: boolean;
 }

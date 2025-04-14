@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, MaxLength, IsBoolean } from 'class-validator';
 
 export class CreateEspecialidadDto {
   @ApiProperty({
@@ -20,4 +20,13 @@ export class CreateEspecialidadDto {
   @IsOptional()
   @IsString({ message: 'La descripción debe ser una cadena de texto' })
   descripcion?: string;
+
+  @ApiProperty({
+    description: 'Indica si la especialidad está activa',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El estado activo debe ser un valor booleano' })
+  activo?: boolean;
 }
