@@ -168,7 +168,7 @@ export class AuthService {
 
     // Revocar todos los tokens de actualización del usuario
     await this.refreshTokenRepository.update(
-      { usuarioId: userId, revocado: false },
+      { usuario: {id:userId}, revocado: false },
       { revocado: true }
     );
 
@@ -231,7 +231,7 @@ export class AuthService {
     await this.refreshTokenRepository.save({
       token: refreshToken,
       expiresAt,
-      usuarioId: usuario.id,
+      usuario: usuario,
       revocado: false,
     });
 

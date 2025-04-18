@@ -1,5 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsEmail, MinLength, MaxLength, Matches, IsEnum, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsEmail,
+  MinLength,
+  MaxLength,
+  Matches,
+  IsEnum,
+  IsOptional,
+  IsBoolean,
+} from 'class-validator';
 import { RolUsuario } from 'src/modules/usuarios/entities/usuario.entity';
 
 export class RegisterUserDto {
@@ -38,7 +48,10 @@ export class RegisterUserDto {
   @IsString({ message: 'El nombre de usuario debe ser una cadena de texto' })
   @MinLength(4, { message: 'El nombre de usuario debe tener al menos 4 caracteres' })
   @MaxLength(50, { message: 'El nombre de usuario no puede exceder los 50 caracteres' })
-  @Matches(/^[a-zA-Z0-9._-]+$/, { message: 'El nombre de usuario solo puede contener letras, números, puntos, guiones bajos y guiones' })
+  @Matches(/^[a-zA-Z0-9._-]+$/, {
+    message:
+      'El nombre de usuario solo puede contener letras, números, puntos, guiones bajos y guiones',
+  })
   username: string;
 
   @ApiProperty({
@@ -50,7 +63,8 @@ export class RegisterUserDto {
   @MinLength(8, { message: 'La contraseña debe tener al menos 8 caracteres' })
   @MaxLength(50, { message: 'La contraseña no puede exceder los 50 caracteres' })
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/, {
-    message: 'La contraseña debe contener al menos una letra minúscula, una letra mayúscula y un número',
+    message:
+      'La contraseña debe contener al menos una letra minúscula, una letra mayúscula y un número',
   })
   password: string;
 
@@ -63,4 +77,13 @@ export class RegisterUserDto {
   @IsOptional()
   @IsEnum(RolUsuario, { message: 'El rol debe ser un valor válido' })
   rol?: RolUsuario;
+
+  @ApiProperty({
+    description: 'Indica si el usuario está activo',
+    example: true,
+    required: false,
+  })
+  @IsOptional()
+  @IsBoolean({ message: 'El estado activo debe ser un valor booleano' })
+  activo?: boolean;
 }

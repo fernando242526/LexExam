@@ -14,14 +14,14 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 
 @ApiTags('Especialidades')
 @Controller('especialidades')
-// @UseGuards(JwtAuthGuard) // Guard global para todas las rutas
+@UseGuards(JwtAuthGuard) // Guard global para todas las rutas
 @ApiBearerAuth() // Para mostrar el botón de autorización en Swagger
 export class EspecialidadesController {
   constructor(private readonly especialidadesService: EspecialidadesService) {}
 
   @Post()
-  // @Roles(RolUsuario.ADMINISTRADOR) // Solo administradores pueden crear
-  // @UseGuards(RolesGuard) // Guard para validar roles
+  @Roles(RolUsuario.ADMINISTRADOR) // Solo administradores pueden crear
+  @UseGuards(RolesGuard) // Guard para validar roles
   @ApiOperation({ summary: 'Crear nueva especialidad', description: 'Crea una nueva especialidad jurídica.' })
   @ApiResponse({ 
     status: HttpStatus.CREATED, 
