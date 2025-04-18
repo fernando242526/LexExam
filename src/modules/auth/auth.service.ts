@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException, BadRequestException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -13,6 +18,12 @@ import { RefreshTokenDto } from './dto/refresh-toekn.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UsuarioDto } from '../usuarios/dto/response-usuario.dto';
 
+import { ResetToken } from './entities/reset-token.entity';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { MailService } from '../mail/mail.service';
+import * as crypto from 'crypto';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -20,8 +31,11 @@ export class AuthService {
     private usuarioRepository: Repository<Usuario>,
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
+    @InjectRepository(ResetToken)
+    private resetTokenRepository: Repository<ResetToken>,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private mailService: MailService,
   ) {}
 
   /**
@@ -67,10 +81,7 @@ export class AuthService {
   async login(loginDto: LoginDto): Promise<AuthDto> {
     // Buscar usuario por username o email
     const usuario = await this.usuarioRepository.findOne({
-      where: [
-        { username: loginDto.username },
-        { email: loginDto.username },
-      ],
+      where: [{ username: loginDto.username }, { email: loginDto.username }],
     });
 
     if (!usuario) {
@@ -144,7 +155,10 @@ export class AuthService {
   /**
    * Cambia la contraseña de un usuario
    */
-  async changePassword(userId: string, changePasswordDto: ChangePasswordDto): Promise<{ success: boolean }> {
+  async changePassword(
+    userId: string,
+    changePasswordDto: ChangePasswordDto,
+  ): Promise<{ success: boolean }> {
     const usuario = await this.usuarioRepository.findOne({
       where: { id: userId },
     });
@@ -154,7 +168,10 @@ export class AuthService {
     }
 
     // Verificar contraseña actual
-    const isCurrentPasswordValid = await bcrypt.compare(changePasswordDto.currentPassword, usuario.password);
+    const isCurrentPasswordValid = await bcrypt.compare(
+      changePasswordDto.currentPassword,
+      usuario.password,
+    );
 
     if (!isCurrentPasswordValid) {
       throw new BadRequestException('La contraseña actual es incorrecta');
@@ -168,8 +185,8 @@ export class AuthService {
 
     // Revocar todos los tokens de actualización del usuario
     await this.refreshTokenRepository.update(
-      { usuario: {id:userId}, revocado: false },
-      { revocado: true }
+      { usuario: { id: userId }, revocado: false },
+      { revocado: true },
     );
 
     return { success: true };
@@ -254,5 +271,147 @@ export class AuthService {
     return this.usuarioRepository.findOne({
       where: { id: userId, activo: true },
     });
+  }
+
+  /**
+   * Solicita restablecimiento de contraseña
+   */
+  async forgotPassword(
+    forgotPasswordDto: ForgotPasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    // Buscar al usuario por correo electrónico
+    const usuario = await this.usuarioRepository.findOne({
+      where: { email: forgotPasswordDto.email },
+    });
+
+    // Si el usuario no existe, no revelar esto por seguridad
+    if (!usuario) {
+      return {
+        success: true,
+        message:
+          'Si el correo existe en nuestra base de datos, se ha enviado un enlace de restablecimiento.',
+      };
+    }
+
+    // Verificar si el usuario está activo
+    if (!usuario.activo) {
+      return {
+        success: false,
+        message: 'La cuenta de usuario está desactivada.',
+      };
+    }
+
+    // Generar un token aleatorio
+    const token = crypto.randomBytes(32).toString('hex');
+
+    // Calcular la fecha de expiración (1 hora)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+
+    // Guardar el token en la base de datos
+    const resetToken = this.resetTokenRepository.create({
+      token,
+      expiresAt,
+      usuario,
+      usuarioId: usuario.id,
+      usado: false,
+    });
+
+    await this.resetTokenRepository.save(resetToken);
+
+    // Enviar el correo electrónico
+    await this.mailService.sendPasswordReset(usuario, token);
+
+    return {
+      success: true,
+      message:
+        'Si el correo existe en nuestra base de datos, se ha enviado un enlace de restablecimiento.',
+    };
+  }
+
+  /**
+   * Restablece la contraseña utilizando un token
+   */
+  async resetPassword(
+    resetPasswordDto: ResetPasswordDto,
+  ): Promise<{ success: boolean; message: string }> {
+    // Buscar el token de restablecimiento
+    const resetToken = await this.resetTokenRepository.findOne({
+      where: { token: resetPasswordDto.token },
+      relations: ['usuario'],
+    });
+
+    // Verificar si el token existe y es válido
+    if (!resetToken || resetToken.usado || new Date() > resetToken.expiresAt) {
+      return {
+        success: false,
+        message: 'El token de restablecimiento es inválido o ha expirado.',
+      };
+    }
+
+    // Verificar si el usuario está activo
+    if (!resetToken.usuario.activo) {
+      return {
+        success: false,
+        message: 'La cuenta de usuario está desactivada.',
+      };
+    }
+
+    // Crear hash de la nueva contraseña
+    const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
+
+    // Actualizar la contraseña del usuario
+    resetToken.usuario.password = hashedPassword;
+    await this.usuarioRepository.save(resetToken.usuario);
+
+    // Marcar el token como usado
+    resetToken.usado = true;
+    await this.resetTokenRepository.save(resetToken);
+
+    // Revocar todos los tokens de actualización del usuario
+    await this.refreshTokenRepository.update(
+      { usuario: { id: resetToken.usuario.id }, revocado: false },
+      { revocado: true },
+    );
+
+    return {
+      success: true,
+      message: 'Contraseña restablecida exitosamente.',
+    };
+  }
+
+  /**
+   * Verifica si un token de restablecimiento es válido
+   */
+  async verifyResetToken(token: string): Promise<{ valid: boolean; message: string }> {
+    const resetToken = await this.resetTokenRepository.findOne({
+      where: { token },
+    });
+
+    if (!resetToken) {
+      return {
+        valid: false,
+        message: 'Token de restablecimiento no encontrado.',
+      };
+    }
+
+    if (resetToken.usado) {
+      return {
+        valid: false,
+        message: 'Este token ya ha sido utilizado.',
+      };
+    }
+
+    if (new Date() > resetToken.expiresAt) {
+      return {
+        valid: false,
+        message: 'El token ha expirado.',
+      };
+    }
+
+    return {
+      valid: true,
+      message: 'Token válido.',
+    };
   }
 }
