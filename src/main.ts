@@ -32,7 +32,7 @@ async function bootstrap() {
   // Filtros e interceptores globales
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(
-    // new LoggingInterceptor(),
+    new LoggingInterceptor(),
     new TransformInterceptor(),
   );
   
