@@ -8,6 +8,8 @@ import { Usuario } from '../usuarios/entities/usuario.entity';
 import { RefreshToken } from './entities/refresh-token.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ResetToken } from './entities/reset-token.entity';
+import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
@@ -22,7 +24,8 @@ import { AuthService } from './auth.service';
         },
       }),
     }),
-    TypeOrmModule.forFeature([Usuario, RefreshToken]),
+    TypeOrmModule.forFeature([Usuario, RefreshToken, ResetToken]),
+    MailModule
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

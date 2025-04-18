@@ -10,6 +10,7 @@ import { TemasModule } from './modules/temas/temas.module';
 import { PreguntasModule } from './modules/preguntas/preguntas.module';
 import { ExamenesModule } from './modules/examenes/examenes.module';
 import { EstadisticasModule } from './modules/estadisticas/estadisticas.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { EstadisticasModule } from './modules/estadisticas/estadisticas.module';
     PreguntasModule,
     ExamenesModule,
     EstadisticasModule,
+    MailModule,
   ],
 })
 export class AppModule {}
