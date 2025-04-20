@@ -8,7 +8,7 @@ import { BalotariosService } from './balotarios.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Balotario]),
-    EspecialidadesModule, // Importa el módulo de especialidades para usar su servicio
+    EspecialidadesModule,
   ],
   controllers: [BalotariosController],
   providers: [BalotariosService],

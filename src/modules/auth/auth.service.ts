@@ -283,7 +283,7 @@ export class AuthService {
     const usuario = await this.usuarioRepository.findOne({
       where: { email: forgotPasswordDto.email },
     });
-
+  
     // Si el usuario no existe, no revelar esto por seguridad
     if (!usuario) {
       return {
@@ -292,7 +292,7 @@ export class AuthService {
           'Si el correo existe en nuestra base de datos, se ha enviado un enlace de restablecimiento.',
       };
     }
-
+  
     // Verificar si el usuario está activo
     if (!usuario.activo) {
       return {
@@ -300,28 +300,27 @@ export class AuthService {
         message: 'La cuenta de usuario está desactivada.',
       };
     }
-
+  
     // Generar un token aleatorio
     const token = crypto.randomBytes(32).toString('hex');
-
+  
     // Calcular la fecha de expiración (1 hora)
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 1);
-
+  
     // Guardar el token en la base de datos
     const resetToken = this.resetTokenRepository.create({
       token,
       expiresAt,
-      usuario,
-      usuarioId: usuario.id,
+      usuario, // Simplemente asignamos el objeto de usuario
       usado: false,
     });
-
+  
     await this.resetTokenRepository.save(resetToken);
-
+  
     // Enviar el correo electrónico
     await this.mailService.sendPasswordReset(usuario, token);
-
+  
     return {
       success: true,
       message:
@@ -340,7 +339,7 @@ export class AuthService {
       where: { token: resetPasswordDto.token },
       relations: ['usuario'],
     });
-
+  
     // Verificar si el token existe y es válido
     if (!resetToken || resetToken.usado || new Date() > resetToken.expiresAt) {
       return {
@@ -348,7 +347,7 @@ export class AuthService {
         message: 'El token de restablecimiento es inválido o ha expirado.',
       };
     }
-
+  
     // Verificar si el usuario está activo
     if (!resetToken.usuario.activo) {
       return {
@@ -356,24 +355,24 @@ export class AuthService {
         message: 'La cuenta de usuario está desactivada.',
       };
     }
-
+  
     // Crear hash de la nueva contraseña
     const hashedPassword = await bcrypt.hash(resetPasswordDto.password, 10);
-
+  
     // Actualizar la contraseña del usuario
     resetToken.usuario.password = hashedPassword;
     await this.usuarioRepository.save(resetToken.usuario);
-
+  
     // Marcar el token como usado
     resetToken.usado = true;
     await this.resetTokenRepository.save(resetToken);
-
+  
     // Revocar todos los tokens de actualización del usuario
     await this.refreshTokenRepository.update(
       { usuario: { id: resetToken.usuario.id }, revocado: false },
       { revocado: true },
     );
-
+  
     return {
       success: true,
       message: 'Contraseña restablecida exitosamente.',

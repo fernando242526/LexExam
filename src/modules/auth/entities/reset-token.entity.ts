@@ -21,7 +21,4 @@ export class ResetToken {
   @ManyToOne(() => Usuario, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
-
-  @Column({ type: 'uuid' })
-  usuarioId: string;
 }
