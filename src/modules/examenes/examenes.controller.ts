@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Query, HttpStatus, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, HttpStatus, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { ExamenesService } from './examenes.service';
 import { ExamenDto } from './dto/response-examen.dto';
@@ -9,9 +9,11 @@ import { ExamenConPreguntasDto } from './dto/response-examen-con-preguntas.dto';
 import { IniciarExamenDto } from './dto/iniciar-examen.dto';
 import { ResultadoExamenDto } from './dto/response-resultado-examen.dto';
 import { EnviarRespuestasDto } from './dto/enviar-respuesta.dto';
-
+import { GetUser } from '../auth/decorators/get-user.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Exámenes')
+@UseGuards(JwtAuthGuard)
 @Controller('examenes')
 export class ExamenesController {
   constructor(private readonly examenesService: ExamenesService) {}
@@ -31,9 +33,10 @@ export class ExamenesController {
     status: HttpStatus.NOT_FOUND, 
     description: 'Tema no encontrado' 
   })
-  crearExamen(@Body() crearExamenDto: CrearExamenDto): Promise<ExamenDto> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  crearExamen(
+    @Body() crearExamenDto: CrearExamenDto,
+    @GetUser('id') usuarioId: string
+  ): Promise<ExamenDto> {
     return this.examenesService.crearExamen(crearExamenDto, usuarioId);
   }
 
@@ -47,9 +50,10 @@ export class ExamenesController {
     description: 'Listado de exámenes', 
     type: PaginatedResponseDto
   })
-  findAll(@Query() filterDto: FilterExamenDto): Promise<PaginatedResponseDto<ExamenDto>> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  findAll(
+    @Query() filterDto: FilterExamenDto,
+    @GetUser('id') usuarioId: string
+  ): Promise<PaginatedResponseDto<ExamenDto>> {
     return this.examenesService.findAll(filterDto, usuarioId);
   }
 
@@ -68,9 +72,10 @@ export class ExamenesController {
     status: HttpStatus.NOT_FOUND, 
     description: 'Examen no encontrado' 
   })
-  findOne(@Param('id', ParseUUIDPipe) id: string): Promise<ExamenDto> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('id') usuarioId: string
+  ): Promise<ExamenDto> {
     return this.examenesService.findOne(id, usuarioId);
   }
 
@@ -92,9 +97,10 @@ export class ExamenesController {
     status: HttpStatus.CONFLICT, 
     description: 'El examen ya ha sido iniciado o finalizado' 
   })
-  iniciarExamen(@Body() iniciarExamenDto: IniciarExamenDto): Promise<ExamenConPreguntasDto> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  iniciarExamen(
+    @Body() iniciarExamenDto: IniciarExamenDto,
+    @GetUser('id') usuarioId: string
+  ): Promise<ExamenConPreguntasDto> {
     return this.examenesService.iniciarExamen(iniciarExamenDto, usuarioId);
   }
 
@@ -116,9 +122,10 @@ export class ExamenesController {
     status: HttpStatus.CONFLICT, 
     description: 'El examen no está en estado INICIADO o el tiempo ha expirado' 
   })
-  enviarRespuestas(@Body() enviarRespuestasDto: EnviarRespuestasDto): Promise<ResultadoExamenDto> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  enviarRespuestas(
+    @Body() enviarRespuestasDto: EnviarRespuestasDto,
+    @GetUser('id') usuarioId: string
+  ): Promise<ResultadoExamenDto> {
     return this.examenesService.enviarRespuestas(enviarRespuestasDto, usuarioId);
   }
 
@@ -137,9 +144,10 @@ export class ExamenesController {
     status: HttpStatus.NOT_FOUND, 
     description: 'Examen o resultado no encontrado' 
   })
-  getResultadoExamen(@Param('id', ParseUUIDPipe) id: string): Promise<ResultadoExamenDto> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  getResultadoExamen(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('id') usuarioId: string
+  ): Promise<ResultadoExamenDto> {
     return this.examenesService.getResultadoExamen(id, usuarioId);
   }
 
@@ -153,9 +161,10 @@ export class ExamenesController {
     description: 'Historial de resultados', 
     type: PaginatedResponseDto
   })
-  getResultadosExamen(@Query() filterDto: FilterExamenDto): Promise<PaginatedResponseDto<ResultadoExamenDto>> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
+  getResultadosExamen(
+    @Query() filterDto: FilterExamenDto,
+    @GetUser('id') usuarioId: string
+  ): Promise<PaginatedResponseDto<ResultadoExamenDto>> {
     return this.examenesService.getResultadosExamen(filterDto, usuarioId);
   }
 
@@ -182,15 +191,16 @@ export class ExamenesController {
     status: HttpStatus.NOT_FOUND, 
     description: 'Examen no encontrado' 
   })
-  verificarEstadoExamen(@Param('id', ParseUUIDPipe) id: string): Promise<{
+  verificarEstadoExamen(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('id') usuarioId: string
+  ): Promise<{
     examenId: string;
     estado: string;
     tiempoRestante: number | null;
     tiempoTotal: number;
     porcentajeCompletado: number;
   }> {
-    // En un sistema real, obtendríamos el ID del usuario del token JWT
-    const usuarioId = '123e4567-e89b-12d3-a456-426614174000'; // Usuario de prueba
     return this.examenesService.verificarEstadoExamen(id, usuarioId);
   }
 }

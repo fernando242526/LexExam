@@ -8,6 +8,7 @@ import { PreguntasModule } from '../preguntas/preguntas.module';
 import { ExamenesController } from './examenes.controller';
 import { ExamenesService } from './examenes.service';
 import { EstadisticasModule } from '../estadisticas/estadisticas.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { EstadisticasModule } from '../estadisticas/estadisticas.module';
     TemasModule,
     PreguntasModule,
     EstadisticasModule, // Importa el módulo de estadísticas para usar su servicio
+    AuthModule
   ],
   controllers: [ExamenesController],
   providers: [ExamenesService],

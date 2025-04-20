@@ -18,17 +18,23 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    const user = await this.authService.validateUser(payload.sub);
-    
-    if (!user) {
-      throw new UnauthorizedException('Usuario no existe o no está activo');
+    try {
+      const user = await this.authService.validateUser(payload.sub);
+      
+      if (!user) {
+        throw new UnauthorizedException('Usuario no existe o no está activo');
+      }
+      
+      // Usamos consistentemente 'id' como identificador
+      return {
+        id: payload.sub, // Convertimos el 'sub' del token JWT a 'id'
+        username: payload.username,
+        email: payload.email,
+        rol: payload.rol,
+      };
+    } catch (error) {
+      console.error('Error in JWT validation:', error);
+      throw error;
     }
-    
-    return {
-      id: payload.sub,
-      username: payload.username,
-      email: payload.email,
-      rol: payload.rol,
-    };
   }
 }

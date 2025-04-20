@@ -12,14 +12,6 @@ export class CrearExamenDto {
   temaId: string;
 
   @ApiProperty({
-    description: 'ID del usuario que está generando el examen',
-    example: '987e6543-e21b-12d3-a456-426614174999',
-  })
-  @IsNotEmpty({ message: 'El ID del usuario es obligatorio' })
-  @IsUUID('4', { message: 'El ID del usuario debe ser un UUID válido' })
-  usuarioId: string;
-
-  @ApiProperty({
     description: 'Duración del examen en minutos',
     example: 60,
     minimum: 5,
