@@ -58,14 +58,14 @@ export class Examen {
   @JoinColumn({ name: 'tema_id' })
   tema: Tema;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'tema_id' ,type: 'uuid' })
   temaId: string;
 
   @ManyToOne(() => Usuario, { nullable: false })
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'usuario_id', type: 'uuid' })
   usuarioId: string;
 
   @OneToMany(() => ResultadoExamen, (resultadoExamen) => resultadoExamen.examen)

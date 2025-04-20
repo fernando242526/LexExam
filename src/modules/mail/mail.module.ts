@@ -14,7 +14,11 @@ import { MailService } from './mail.service';
         transport: {
           host: configService.get('MAIL_HOST', 'smtp.ethereal.email'),
           port: configService.get('MAIL_PORT', 587),
-          secure: configService.get('MAIL_SECURE', false),
+          secure: false, // Usar false para STARTTLS en el puerto 587
+          requireTLS: true, // Requerir TLS
+          tls: {
+            rejectUnauthorized: false, // En desarrollo con Ethereal está bien permitir certificados auto-firmados
+          },
           auth: {
             user: configService.get('MAIL_USER', 'ethereal_user'),
             pass: configService.get('MAIL_PASSWORD', 'ethereal_password'),

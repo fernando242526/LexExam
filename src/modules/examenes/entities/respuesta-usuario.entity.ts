@@ -38,13 +38,13 @@ export class RespuestaUsuario {
   @JoinColumn({ name: 'pregunta_id' })
   pregunta: Pregunta;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'pregunta_id', type: 'uuid' })
   preguntaId: string;
 
   @ManyToOne(() => Respuesta, (respuesta) => respuesta.respuestasUsuarios, { nullable: false })
   @JoinColumn({ name: 'respuesta_id' })
   respuesta: Respuesta;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'respuesta_id', type: 'uuid' })
   respuestaId: string;
 }

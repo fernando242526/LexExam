@@ -51,14 +51,14 @@ export class ResultadoExamen {
   @JoinColumn({ name: 'examen_id' })
   examen: Examen;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'examen_id', type: 'uuid' })
   examenId: string;
 
   @ManyToOne(() => Usuario, (usuario) => usuario.resultadosExamenes, { nullable: false })
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
 
-  @Column({ type: 'uuid' })
+  @Column({ name: 'usuario_id', type: 'uuid' })
   usuarioId: string;
 
   @OneToMany(() => RespuestaUsuario, (respuestaUsuario) => respuestaUsuario.resultadoExamen, { cascade: true })
