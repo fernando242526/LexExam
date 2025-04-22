@@ -1,6 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { EstadoExamen, Examen } from '../entities/examen.entity';
 import { TemaSelectDto } from 'src/modules/temas/dto/select-tema.dto';
+import { UsuarioDto } from 'src/modules/usuarios/dto/response-usuario.dto';
 
 export class ExamenDto {
   @ApiProperty({
@@ -55,16 +56,10 @@ export class ExamenDto {
   tema?: TemaSelectDto;
 
   @ApiProperty({
-    description: 'ID del tema',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Usuario del examen',
+    type: UsuarioDto,
   })
-  temaId: string;
-
-  @ApiProperty({
-    description: 'ID del usuario',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  usuarioId: string;
+  usuario?: UsuarioDto;
 
   @ApiProperty({
     description: 'Fecha de creación del registro',
@@ -86,14 +81,17 @@ export class ExamenDto {
     this.fechaInicio = examen.fechaInicio;
     this.fechaFin = examen.fechaFin;
     this.estado = examen.estado;
-    this.temaId = examen.temaId;
-    this.usuarioId = examen.usuarioId;
     this.createdAt = examen.createdAt;
     this.updatedAt = examen.updatedAt;
     
     // Si el tema viene cargado, lo mapeamos al DTO
     if (examen.tema) {
       this.tema = new TemaSelectDto(examen.tema);
+    }
+    
+    // Si el usuario viene cargado, lo mapeamos al DTO
+    if (examen.usuario) {
+      this.usuario = new UsuarioDto(examen.usuario);
     }
   }
 }

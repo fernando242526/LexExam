@@ -54,20 +54,17 @@ export class Examen {
   updatedAt: Date;
 
   // Relaciones
+  @ApiProperty({ description: 'Tema asociado al examen', type: () => Tema })
   @ManyToOne(() => Tema, { nullable: false })
   @JoinColumn({ name: 'tema_id' })
   tema: Tema;
 
-  @Column({ name: 'tema_id' ,type: 'uuid' })
-  temaId: string;
-
+  @ApiProperty({ description: 'Usuario asociado al examen', type: () => Usuario })
   @ManyToOne(() => Usuario, { nullable: false })
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
 
-  @Column({ name: 'usuario_id', type: 'uuid' })
-  usuarioId: string;
-
+  @ApiProperty({ description: 'Resultados del examen', type: () => [ResultadoExamen] })
   @OneToMany(() => ResultadoExamen, (resultadoExamen) => resultadoExamen.examen)
   resultados: ResultadoExamen[];
 }

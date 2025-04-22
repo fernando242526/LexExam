@@ -1,5 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { TemaSelectDto } from 'src/modules/temas/dto/select-tema.dto';
+import { UsuarioDto } from 'src/modules/usuarios/dto/response-usuario.dto';
 import { EstadisticaTema } from '../entities/estadistica.entity';
 
 export class EstadisticaTemaDto {
@@ -46,16 +47,10 @@ export class EstadisticaTemaDto {
   tema?: TemaSelectDto;
 
   @ApiProperty({
-    description: 'ID del tema',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Usuario asociado a la estadística',
+    type: UsuarioDto,
   })
-  temaId: string;
-
-  @ApiProperty({
-    description: 'ID del usuario',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  usuarioId: string;
+  usuario?: UsuarioDto;
 
   @ApiProperty({
     description: 'Fecha de creación del registro',
@@ -76,14 +71,17 @@ export class EstadisticaTemaDto {
     this.porcentajeAcierto = estadistica.porcentajeAcierto;
     this.examenesRealizados = estadistica.examenesRealizados;
     this.tiempoPromedio = estadistica.tiempoPromedio;
-    this.temaId = estadistica.temaId;
-    this.usuarioId = estadistica.usuarioId;
     this.createdAt = estadistica.createdAt;
     this.updatedAt = estadistica.updatedAt;
     
     // Si el tema viene cargado, lo mapeamos al DTO
     if (estadistica.tema) {
       this.tema = new TemaSelectDto(estadistica.tema);
+    }
+    
+    // Si el usuario viene cargado, lo mapeamos al DTO
+    if (estadistica.usuario) {
+      this.usuario = new UsuarioDto(estadistica.usuario);
     }
   }
 }

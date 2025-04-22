@@ -27,24 +27,18 @@ export class RespuestaUsuario {
   updatedAt: Date;
 
   // Relaciones
+  @ApiProperty({ description: 'Resultado del examen asociado', type: () => ResultadoExamen })
   @ManyToOne(() => ResultadoExamen, (resultadoExamen) => resultadoExamen.respuestasUsuario, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'resultado_examen_id' })
   resultadoExamen: ResultadoExamen;
 
-  @Column({ type: 'uuid' })
-  resultadoExamenId: string;
-
+  @ApiProperty({ description: 'Pregunta respondida', type: () => Pregunta })
   @ManyToOne(() => Pregunta, (pregunta) => pregunta.respuestasUsuarios, { nullable: false })
   @JoinColumn({ name: 'pregunta_id' })
   pregunta: Pregunta;
 
-  @Column({ name: 'pregunta_id', type: 'uuid' })
-  preguntaId: string;
-
+  @ApiProperty({ description: 'Respuesta seleccionada', type: () => Respuesta })
   @ManyToOne(() => Respuesta, (respuesta) => respuesta.respuestasUsuarios, { nullable: false })
   @JoinColumn({ name: 'respuesta_id' })
   respuesta: Respuesta;
-
-  @Column({ name: 'respuesta_id', type: 'uuid' })
-  respuestaId: string;
 }

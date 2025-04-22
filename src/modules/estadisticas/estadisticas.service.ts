@@ -31,21 +31,21 @@ export class EstadisticasService {
     // Buscar si ya existen estadísticas para este tema y usuario
     let estadistica = await this.estadisticaTemaRepository.findOne({
       where: {
-        temaId,
-        usuarioId,
+        tema: { id: temaId },
+        usuario: { id: usuarioId },
       },
     });
     
     // Si no existen, crear una nueva entrada
     if (!estadistica) {
       estadistica = this.estadisticaTemaRepository.create({
-        temaId,
-        usuarioId,
         totalPreguntas: 0,
         acertadas: 0,
         porcentajeAcierto: 0,
         examenesRealizados: 0,
         tiempoPromedio: 0,
+        tema: { id: temaId },
+        usuario: { id: usuarioId },
       });
     }
     
@@ -79,8 +79,11 @@ export class EstadisticasService {
    */
   async getEstadisticasTema(temaId: string, usuarioId: string): Promise<EstadisticaTemaDto> {
     const estadistica = await this.estadisticaTemaRepository.findOne({
-      where: { temaId, usuarioId },
-      relations: { tema: true },
+      where: { 
+        tema: { id: temaId }, 
+        usuario: { id: usuarioId } 
+      },
+      relations: { tema: true, usuario: true },
     });
     
     if (!estadistica) {
@@ -95,8 +98,8 @@ export class EstadisticasService {
    */
   async getEstadisticasTemas(usuarioId: string): Promise<EstadisticaTemaDto[]> {
     const estadisticas = await this.estadisticaTemaRepository.find({
-      where: { usuarioId },
-      relations: { tema: true },
+      where: { usuario: { id: usuarioId } },
+      relations: { tema: true, usuario: true },
       order: { porcentajeAcierto: 'DESC' },
     });
     
@@ -109,13 +112,13 @@ export class EstadisticasService {
   async getResumenEstadisticas(usuarioId: string): Promise<ResumenEstadisticasDto> {
     // Obtener todas las estadísticas del usuario
     const estadisticas = await this.estadisticaTemaRepository.find({
-      where: { usuarioId },
+      where: { usuario: { id: usuarioId } },
       relations: { tema: true },
     });
     
     // Obtener todos los resultados de exámenes del usuario
     const resultados = await this.resultadoExamenRepository.find({
-      where: { usuarioId },
+      where: { usuario: { id: usuarioId } },
     });
     
     // Calcular resumen
@@ -147,7 +150,7 @@ export class EstadisticasService {
       : null;
     
     const mejorTemaInfo = mejorTema ? {
-      id: mejorTema.temaId,
+      id: mejorTema.tema.id,
       titulo: mejorTema.tema?.titulo || 'Desconocido',
       porcentajeAcierto: mejorTema.porcentajeAcierto,
     } : null;
@@ -171,7 +174,7 @@ export class EstadisticasService {
   async getEvolucionRendimiento(usuarioId: string): Promise<EvolucionRendimientoDto> {
     // Obtener todos los resultados de exámenes ordenados por fecha
     const resultados = await this.resultadoExamenRepository.find({
-      where: { usuarioId },
+      where: { usuario: { id: usuarioId } },
       order: { fechaInicio: 'ASC' },
     });
     

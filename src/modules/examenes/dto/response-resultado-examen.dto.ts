@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ExamenDto } from './response-examen.dto';
 import { ResultadoExamen } from '../entities/resultado-examen.entity';
 import { RespuestaUsuarioDto } from './response-respuesta-usuario.dto';
+import { UsuarioDto } from 'src/modules/usuarios/dto/response-usuario.dto';
 
 export class ResultadoExamenDto {
   @ApiProperty({
@@ -59,16 +60,10 @@ export class ResultadoExamenDto {
   examen?: ExamenDto;
 
   @ApiProperty({
-    description: 'ID del examen',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Usuario que realizó el examen',
+    type: UsuarioDto,
   })
-  examenId: string;
-
-  @ApiProperty({
-    description: 'ID del usuario',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  usuarioId: string;
+  usuario?: UsuarioDto;
 
   @ApiProperty({
     description: 'Respuestas del usuario',
@@ -97,14 +92,17 @@ export class ResultadoExamenDto {
     this.duracionReal = resultado.duracionReal;
     this.fechaInicio = resultado.fechaInicio;
     this.fechaFin = resultado.fechaFin;
-    this.examenId = resultado.examenId;
-    this.usuarioId = resultado.usuarioId;
     this.createdAt = resultado.createdAt;
     this.updatedAt = resultado.updatedAt;
     
     // Si el examen viene cargado, lo mapeamos al DTO
     if (resultado.examen) {
       this.examen = new ExamenDto(resultado.examen);
+    }
+    
+    // Si el usuario viene cargado, lo mapeamos al DTO
+    if (resultado.usuario) {
+      this.usuario = new UsuarioDto(resultado.usuario);
     }
     
     // Si las respuestas vienen cargadas, las mapeamos a DTOs

@@ -28,6 +28,7 @@ import { EnviarRespuestasDto } from './dto/enviar-respuesta.dto';
 import { ResultadoExamenDto } from './dto/response-resultado-examen.dto';
 import { DateUtils } from 'src/common/utils/date.util';
 import { EstadisticasService } from '../estadisticas/estadisticas.service';
+import { Respuesta } from '../preguntas/entities/respuesta.entity';
 
 @Injectable()
 export class ExamenesService {
@@ -56,9 +57,11 @@ export class ExamenesService {
 
     // Crear y guardar el examen
     const examen = this.examenRepository.create({
-      ...crearExamenDto,
       titulo,
-      usuarioId,
+      duracionMinutos: crearExamenDto.duracionMinutos,
+      numeroPreguntas: crearExamenDto.numeroPreguntas,
+      tema: { id: crearExamenDto.temaId },
+      usuario: { id: usuarioId },
       estado: EstadoExamen.PENDIENTE,
     });
 
@@ -67,7 +70,7 @@ export class ExamenesService {
     // Cargar relaciones
     const examenCompleto = await this.examenRepository.findOne({
       where: { id: savedExamen.id },
-      relations: { tema: true },
+      relations: { tema: true, usuario: true },
     });
 
     if (!examenCompleto) {
@@ -88,10 +91,12 @@ export class ExamenesService {
     const skip = (page - 1) * limit;
 
     // Construir where según los filtros
-    const where: FindOptionsWhere<Examen> = { usuarioId };
+    const where: FindOptionsWhere<Examen> = { 
+      usuario: { id: usuarioId } 
+    };
 
     if (temaId) {
-      where.temaId = temaId;
+      where.tema = { id: temaId };
     }
 
     if (estado) {
@@ -110,7 +115,7 @@ export class ExamenesService {
     // Ejecutar la consulta
     const [examenes, totalItems] = await this.examenRepository.findAndCount({
       where,
-      relations: { tema: true },
+      relations: { tema: true, usuario: true },
       order: { [sortBy || 'createdAt']: order || 'DESC' },
       skip,
       take: limit,
@@ -138,8 +143,8 @@ export class ExamenesService {
    */
   async findOne(id: string, usuarioId: string): Promise<ExamenDto> {
     const examen = await this.examenRepository.findOne({
-      where: { id, usuarioId },
-      relations: { tema: true },
+      where: { id, usuario: { id: usuarioId } },
+      relations: { tema: true, usuario: true },
     });
 
     if (!examen) {
@@ -160,8 +165,8 @@ export class ExamenesService {
 
     // Obtener el examen
     const examen = await this.examenRepository.findOne({
-      where: { id: examenId, usuarioId },
-      relations: { tema: true },
+      where: { id: examenId, usuario: { id: usuarioId } },
+      relations: { tema: true, usuario: true },
     });
 
     if (!examen) {
@@ -175,7 +180,7 @@ export class ExamenesService {
 
     // Obtener preguntas aleatorias para el examen
     const preguntas = await this.preguntasService.findRandomForExam(
-      examen.temaId,
+      examen.tema.id,
       examen.numeroPreguntas,
     );
 
@@ -201,8 +206,8 @@ export class ExamenesService {
 
     // Obtener el examen
     const examen = await this.examenRepository.findOne({
-      where: { id: examenId, usuarioId },
-      relations: { tema: true },
+      where: { id: examenId, usuario: { id: usuarioId } },
+      relations: { tema: true, usuario: true },
     });
 
     if (!examen) {
@@ -233,8 +238,8 @@ export class ExamenesService {
 
       // Crear registro de resultado del examen
       const resultadoExamen = this.resultadoExamenRepository.create({
-        examenId: examen.id,
-        usuarioId,
+        examen: { id: examen.id },
+        usuario: { id: usuarioId },
         totalPreguntas: respuestas.length,
         fechaInicio: examen.fechaInicio!,
         fechaFin: ahora,
@@ -252,11 +257,12 @@ export class ExamenesService {
 
       for (const respuestaDto of respuestas) {
         // Obtener la respuesta original para verificar si es correcta
-        const respuesta = await queryRunner.manager
-          .createQueryBuilder('respuesta', 'r')
-          .where('r.id = :respuestaId', { respuestaId: respuestaDto.respuestaId })
-          .andWhere('r.preguntaId = :preguntaId', { preguntaId: respuestaDto.preguntaId })
-          .getOne();
+        const respuesta = await queryRunner.manager.findOne(Respuesta, {
+          where: {
+            id: respuestaDto.respuestaId,
+            pregunta: { id: respuestaDto.preguntaId }
+          }
+        });
 
         if (!respuesta) {
           throw new BadRequestException(
@@ -274,9 +280,9 @@ export class ExamenesService {
 
         // Guardar la respuesta del usuario
         const respuestaUsuario = this.respuestaUsuarioRepository.create({
-          resultadoExamenId: savedResultado.id,
-          preguntaId: respuestaDto.preguntaId,
-          respuestaId: respuestaDto.respuestaId,
+          resultadoExamen: { id: savedResultado.id },
+          pregunta: { id: respuestaDto.preguntaId },
+          respuesta: { id: respuestaDto.respuestaId },
           esCorrecta,
           tiempoRespuesta: null, // No se registra el tiempo por pregunta en este caso
         });
@@ -300,7 +306,7 @@ export class ExamenesService {
 
       // Actualizar estadísticas
       await this.estadisticasService.actualizarEstadisticasDespuesDeExamen(
-        examen.temaId,
+        examen.tema.id,
         usuarioId,
         respuestas.length,
         preguntasAcertadas,
@@ -314,7 +320,10 @@ export class ExamenesService {
       const resultadoCompleto = await this.resultadoExamenRepository.findOne({
         where: { id: savedResultado.id },
         relations: {
-          examen: true,
+          examen: {
+            tema: true
+          },
+          usuario: true,
           respuestasUsuario: {
             pregunta: {
               respuestas: true,
@@ -345,7 +354,7 @@ export class ExamenesService {
   async getResultadoExamen(examenId: string, usuarioId: string): Promise<ResultadoExamenDto> {
     // Verificar que el examen existe y pertenece al usuario
     const examen = await this.examenRepository.findOne({
-      where: { id: examenId, usuarioId },
+      where: { id: examenId, usuario: { id: usuarioId } },
     });
 
     if (!examen) {
@@ -354,9 +363,12 @@ export class ExamenesService {
 
     // Obtener el resultado del examen con todas sus relaciones
     const resultado = await this.resultadoExamenRepository.findOne({
-      where: { examenId, usuarioId },
+      where: { examen: { id: examenId }, usuario: { id: usuarioId } },
       relations: {
-        examen: true,
+        examen: {
+          tema: true
+        },
+        usuario: true,
         respuestasUsuario: {
           pregunta: {
             respuestas: true,
@@ -391,11 +403,13 @@ export class ExamenesService {
     const skip = (page - 1) * limit;
 
     // Construir where según los filtros
-    let where: any = { usuarioId };
+    let where: any = { 
+      usuario: { id: usuarioId } 
+    };
 
     if (temaId) {
       where.examen = {
-        temaId,
+        tema: { id: temaId },
       };
     }
 
@@ -411,7 +425,12 @@ export class ExamenesService {
     // Ejecutar la consulta
     const [resultados, totalItems] = await this.resultadoExamenRepository.findAndCount({
       where,
-      relations: { examen: true },
+      relations: { 
+        examen: {
+          tema: true
+        },
+        usuario: true
+      },
       order: { [sortBy || 'createdAt']: order || 'DESC' },
       skip,
       take: limit,
@@ -449,7 +468,7 @@ export class ExamenesService {
   }> {
     // Obtener el examen
     const examen = await this.examenRepository.findOne({
-      where: { id: examenId, usuarioId },
+      where: { id: examenId, usuario: { id: usuarioId } },
     });
 
     if (!examen) {
