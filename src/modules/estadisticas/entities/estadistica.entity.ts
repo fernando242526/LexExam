@@ -38,17 +38,13 @@ export class EstadisticaTema {
   updatedAt: Date;
 
   // Relaciones
+  @ApiProperty({ description: 'Usuario asociado a la estadística', type: () => Usuario })
   @ManyToOne(() => Usuario, { nullable: false })
   @JoinColumn({ name: 'usuario_id' })
   usuario: Usuario;
 
-  @Column({ type: 'uuid' })
-  usuarioId: string;
-
+  @ApiProperty({ description: 'Tema asociado a la estadística', type: () => Tema })
   @ManyToOne(() => Tema, { nullable: false })
   @JoinColumn({ name: 'tema_id' })
   tema: Tema;
-
-  @Column({ type: 'uuid' })
-  temaId: string;
 }

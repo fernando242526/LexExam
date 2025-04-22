@@ -30,36 +30,29 @@ export class RespuestaUsuarioDto {
   pregunta?: PreguntaDto;
 
   @ApiProperty({
-    description: 'ID de la pregunta',
-    example: '123e4567-e89b-12d3-a456-426614174000',
-  })
-  preguntaId: string;
-
-  @ApiProperty({
     description: 'Respuesta seleccionada',
     type: RespuestaDto,
   })
   respuesta?: RespuestaDto;
 
   @ApiProperty({
-    description: 'ID de la respuesta',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Fecha de creación del registro',
+    example: '2025-04-11T12:30:15Z',
   })
-  respuestaId: string;
+  createdAt: Date;
 
   @ApiProperty({
-    description: 'ID del resultado del examen',
-    example: '123e4567-e89b-12d3-a456-426614174000',
+    description: 'Fecha de última actualización del registro',
+    example: '2025-04-11T12:30:15Z',
   })
-  resultadoExamenId: string;
+  updatedAt: Date;
 
   constructor(respuestaUsuario: RespuestaUsuario) {
     this.id = respuestaUsuario.id;
     this.esCorrecta = respuestaUsuario.esCorrecta;
     this.tiempoRespuesta = respuestaUsuario.tiempoRespuesta;
-    this.preguntaId = respuestaUsuario.preguntaId;
-    this.respuestaId = respuestaUsuario.respuestaId;
-    this.resultadoExamenId = respuestaUsuario.resultadoExamenId;
+    this.createdAt = respuestaUsuario.createdAt;
+    this.updatedAt = respuestaUsuario.updatedAt;
     
     // Si la pregunta viene cargada, la mapeamos al DTO
     if (respuestaUsuario.pregunta) {
