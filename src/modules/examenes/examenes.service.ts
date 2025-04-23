@@ -196,6 +196,107 @@ export class ExamenesService {
   }
 
   /**
+   * Continúa un examen ya iniciado y devuelve las preguntas
+   */
+  async continuarExamen(examenId: string, usuarioId: string): Promise<ExamenConPreguntasDto> {
+    // Obtener el examen
+    const examen = await this.examenRepository.findOne({
+      where: { id: examenId, usuario: { id: usuarioId } },
+      relations: { tema: true, usuario: true },
+    });
+
+    if (!examen) {
+      throw new NotFoundException(`Examen con ID ${examenId} no encontrado`);
+    }
+
+    // Verificar si el examen ha caducado
+    const ahora = new Date();
+    if (examen.fechaFin && ahora > examen.fechaFin) {
+      examen.estado = EstadoExamen.CADUCADO;
+      await this.examenRepository.save(examen);
+      throw new ConflictException('El tiempo para completar el examen ha expirado');
+    }
+
+    // Verificar que el examen esté en estado INICIADO
+    if (examen.estado !== EstadoExamen.INICIADO) {
+      throw new ConflictException(
+        `No se puede continuar el examen porque está en estado ${examen.estado}`,
+      );
+    }
+
+    // Obtener IDs de las preguntas que ya estaban asignadas a este examen
+    const preguntasIds = await this.obtenerPreguntasDeExamen(examenId);
+    
+    if (preguntasIds.length === 0) {
+      throw new BadRequestException('No se encontraron preguntas asociadas a este examen');
+    }
+
+    // Obtener las preguntas completas
+    const preguntas = await this.preguntasService.findPreguntasByIds(preguntasIds);
+
+    return new ExamenConPreguntasDto(examen, preguntas);
+  }
+
+  /**
+   * Obtiene los IDs de las preguntas asignadas a un examen
+   * Este método se utiliza para la funcionalidad de continuar examen
+   */
+  private async obtenerPreguntasDeExamen(examenId: string): Promise<string[]> {
+    // Buscar si hay resultados previos (respuestas guardadas parciales)
+    const resultadoPrevio = await this.resultadoExamenRepository.findOne({
+      where: { examen: { id: examenId } },
+      relations: { respuestasUsuario: { pregunta: true } },
+    });
+
+    if (resultadoPrevio && resultadoPrevio.respuestasUsuario.length > 0) {
+      // Si hay un resultado previo, obtener las preguntas de ese resultado
+      return resultadoPrevio.respuestasUsuario.map(ru => ru.pregunta.id);
+    } else {
+      // Si no hay un resultado previo, obtener las preguntas basadas en exámenes similares
+      // (mismo tema, mismo número de preguntas)
+      const examen = await this.examenRepository.findOne({
+        where: { id: examenId },
+        relations: { tema: true },
+      });
+
+      if (!examen) {
+        return [];
+      }
+
+      // Buscar exámenes finalizados del mismo tema y con mismo número de preguntas
+      const examenesFinalizados = await this.examenRepository.find({
+        where: {
+          tema: { id: examen.tema.id },
+          numeroPreguntas: examen.numeroPreguntas,
+          estado: EstadoExamen.FINALIZADO,
+        },
+        take: 1, // Tomamos solo el más reciente
+        order: { fechaFin: 'DESC' },
+      });
+
+      if (examenesFinalizados.length > 0) {
+        const ultimoExamenFinalizado = examenesFinalizados[0];
+        const resultado = await this.resultadoExamenRepository.findOne({
+          where: { examen: { id: ultimoExamenFinalizado.id } },
+          relations: { respuestasUsuario: { pregunta: true } },
+        });
+
+        if (resultado && resultado.respuestasUsuario.length > 0) {
+          return resultado.respuestasUsuario.map(ru => ru.pregunta.id);
+        }
+      }
+
+      // Si no encontramos preguntas de manera fácil, obtenemos nuevas preguntas aleatorias
+      const preguntasAleatorias = await this.preguntasService.findRandomForExam(
+        examen.tema.id,
+        examen.numeroPreguntas,
+      );
+      
+      return preguntasAleatorias.map(p => p.id);
+    }
+  }
+
+  /**
    * Envía las respuestas del examen y devuelve los resultados
    */
   async enviarRespuestas(
@@ -221,7 +322,11 @@ export class ExamenesService {
 
     // Verificar que no se ha excedido el tiempo límite
     const ahora = new Date();
-    if (examen.fechaFin && ahora > examen.fechaFin) {
+
+    // Definir tolerancia de 2 segundos
+    const TOLERANCIA_MS = 2000;
+
+    if (examen.fechaFin && ahora.getTime() > examen.fechaFin.getTime() + TOLERANCIA_MS) {
       examen.estado = EstadoExamen.CADUCADO;
       await this.examenRepository.save(examen);
       throw new ConflictException(`El tiempo para completar el examen ha expirado`);

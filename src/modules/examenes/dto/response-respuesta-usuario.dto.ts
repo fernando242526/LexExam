@@ -32,8 +32,9 @@ export class RespuestaUsuarioDto {
   @ApiProperty({
     description: 'Respuesta seleccionada',
     type: RespuestaDto,
+    nullable: true,
   })
-  respuesta?: RespuestaDto;
+  respuesta?: RespuestaDto | null;
 
   @ApiProperty({
     description: 'Fecha de creación del registro',
