@@ -29,6 +29,8 @@ import { ResultadoExamenDto } from './dto/response-resultado-examen.dto';
 import { DateUtils } from 'src/common/utils/date.util';
 import { EstadisticasService } from '../estadisticas/estadisticas.service';
 import { Respuesta } from '../preguntas/entities/respuesta.entity';
+import { ExamenConPreguntasRespuestasDTO } from './dto/response-examen-con-preguntas-previas.dto';
+import { GuardarRespuestasParcialesDto } from './dto/guardar-respuestas-parciales.dto';
 
 @Injectable()
 export class ExamenesService {
@@ -198,7 +200,10 @@ export class ExamenesService {
   /**
    * Continúa un examen ya iniciado y devuelve las preguntas
    */
-  async continuarExamen(examenId: string, usuarioId: string): Promise<ExamenConPreguntasDto> {
+  async continuarExamen(
+    examenId: string,
+    usuarioId: string,
+  ): Promise<ExamenConPreguntasRespuestasDTO> {
     // Obtener el examen
     const examen = await this.examenRepository.findOne({
       where: { id: examenId, usuario: { id: usuarioId } },
@@ -224,17 +229,33 @@ export class ExamenesService {
       );
     }
 
-    // Obtener IDs de las preguntas que ya estaban asignadas a este examen
-    const preguntasIds = await this.obtenerPreguntasDeExamen(examenId);
-    
-    if (preguntasIds.length === 0) {
-      throw new BadRequestException('No se encontraron preguntas asociadas a este examen');
+    // Buscar respuestas previas si existen
+    const resultadoPrevio = await this.resultadoExamenRepository.findOne({
+      where: { examen: { id: examenId } },
+      relations: { respuestasUsuario: { pregunta: true, respuesta: true } },
+    });
+
+    let respuestasUsuario: RespuestaUsuario[] = [];
+    let preguntasIds: string[] = [];
+
+    if (resultadoPrevio && resultadoPrevio.respuestasUsuario.length > 0) {
+      // Si hay un resultado previo, obtener las respuestas y las preguntas
+      respuestasUsuario = resultadoPrevio.respuestasUsuario;
+      preguntasIds = respuestasUsuario.map((ru) => ru.pregunta.id);
+    } else {
+      // Si no hay un resultado previo, obtener las preguntas basadas en exámenes similares
+      preguntasIds = await this.obtenerPreguntasDeExamen(examenId);
+
+      if (preguntasIds.length === 0) {
+        throw new BadRequestException('No se encontraron preguntas asociadas a este examen');
+      }
     }
 
     // Obtener las preguntas completas
     const preguntas = await this.preguntasService.findPreguntasByIds(preguntasIds);
 
-    return new ExamenConPreguntasDto(examen, preguntas);
+    // Ahora podemos usar el constructor actualizado que acepta ambos tipos
+    return new ExamenConPreguntasRespuestasDTO(examen, preguntas, respuestasUsuario);
   }
 
   /**
@@ -250,7 +271,7 @@ export class ExamenesService {
 
     if (resultadoPrevio && resultadoPrevio.respuestasUsuario.length > 0) {
       // Si hay un resultado previo, obtener las preguntas de ese resultado
-      return resultadoPrevio.respuestasUsuario.map(ru => ru.pregunta.id);
+      return resultadoPrevio.respuestasUsuario.map((ru) => ru.pregunta.id);
     } else {
       // Si no hay un resultado previo, obtener las preguntas basadas en exámenes similares
       // (mismo tema, mismo número de preguntas)
@@ -282,7 +303,7 @@ export class ExamenesService {
         });
 
         if (resultado && resultado.respuestasUsuario.length > 0) {
-          return resultado.respuestasUsuario.map(ru => ru.pregunta.id);
+          return resultado.respuestasUsuario.map((ru) => ru.pregunta.id);
         }
       }
 
@@ -291,8 +312,126 @@ export class ExamenesService {
         examen.tema.id,
         examen.numeroPreguntas,
       );
-      
-      return preguntasAleatorias.map(p => p.id);
+
+      return preguntasAleatorias.map((p) => p.id);
+    }
+  }
+
+  /**
+   * Guarda respuestas parciales de un examen sin finalizarlo
+   */
+  async guardarRespuestasParciales(
+    dto: GuardarRespuestasParcialesDto,
+    usuarioId: string,
+  ): Promise<{ mensaje: string }> {
+    const { examenId, respuestas } = dto;
+  
+    // Verificar que el examen existe y pertenece al usuario
+    const examen = await this.examenRepository.findOne({
+      where: { id: examenId, usuario: { id: usuarioId } },
+    });
+  
+    if (!examen) {
+      throw new NotFoundException(`Examen con ID ${examenId} no encontrado`);
+    }
+  
+    // Verificar que el examen está en estado INICIADO
+    if (examen.estado !== EstadoExamen.INICIADO) {
+      throw new ConflictException(`El examen no está en estado INICIADO`);
+    }
+  
+    // Verificar que no ha expirado
+    const ahora = new Date();
+    if (examen.fechaFin && ahora > examen.fechaFin) {
+      examen.estado = EstadoExamen.CADUCADO;
+      await this.examenRepository.save(examen);
+      throw new ConflictException(`El tiempo para completar el examen ha expirado`);
+    }
+  
+    // Iniciar transacción
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+  
+    try {
+      // Buscar si ya existe un resultado parcial para este examen
+      let resultadoExamen = await queryRunner.manager.findOne(ResultadoExamen, {
+        where: { examen: { id: examenId }, usuario: { id: usuarioId } },
+        relations: { respuestasUsuario: true },
+      });
+  
+      // Si no existe, crear un resultado parcial
+      if (!resultadoExamen) {
+        // Asegurarnos de tener fechas válidas
+        const fechaInicio = examen.fechaInicio || ahora;
+        
+        // Para fechaFin, usamos una fecha temporal (se actualizará al finalizar el examen)
+        // La fijamos a 1 día después para evitar que caduque durante el guardado
+        const fechaFinTemporal = new Date(fechaInicio);
+        fechaFinTemporal.setDate(fechaFinTemporal.getDate() + 1);
+        
+        // Calcular duración real en minutos (será actualizado cuando el examen se finalice)
+        const duracionReal = Math.max(1, Math.floor((ahora.getTime() - fechaInicio.getTime()) / 60000));
+  
+        resultadoExamen = queryRunner.manager.create(ResultadoExamen, {
+          examen: { id: examenId },
+          usuario: { id: usuarioId },
+          totalPreguntas: respuestas.length,
+          fechaInicio: fechaInicio,
+          fechaFin: fechaFinTemporal, // Agregamos fecha de fin temporal
+          // Estos campos no están finalizados aún
+          preguntasAcertadas: 0,
+          puntuacionTotal: 0,
+          porcentajeAcierto: 0,
+          duracionReal: duracionReal,
+        });
+  
+        resultadoExamen = await queryRunner.manager.save(resultadoExamen);
+      } else {
+        // Si ya existe, actualizamos la duración real
+        const fechaInicio = resultadoExamen.fechaInicio;
+        const duracionActual = Math.max(1, Math.floor((ahora.getTime() - fechaInicio.getTime()) / 60000));
+        
+        // Actualizar solo duracionReal
+        resultadoExamen.duracionReal = duracionActual;
+        await queryRunner.manager.save(resultadoExamen);
+      }
+  
+      // Eliminar las respuestas existentes para este resultado
+      if (resultadoExamen.respuestasUsuario && resultadoExamen.respuestasUsuario.length > 0) {
+        await queryRunner.manager.delete(
+          RespuestaUsuario,
+          resultadoExamen.respuestasUsuario.map(ru => ru.id),
+        );
+      }
+  
+      // Guardar las nuevas respuestas
+      for (const respuesta of respuestas) {
+        const respuestaUsuario = queryRunner.manager.create(RespuestaUsuario, {
+          resultadoExamen: { id: resultadoExamen.id },
+          pregunta: { id: respuesta.preguntaId },
+          respuesta: respuesta.respuestaId ? { id: respuesta.respuestaId } : null,
+          // No calculamos si es correcta porque es parcial
+          esCorrecta: false, 
+          tiempoRespuesta: null,
+        });
+  
+        await queryRunner.manager.save(respuestaUsuario);
+      }
+  
+      // Confirmar transacción
+      await queryRunner.commitTransaction();
+  
+      return {
+        mensaje: 'Respuestas guardadas correctamente',
+      };
+    } catch (error) {
+      // Revertir cambios en caso de error
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      // Liberar el queryRunner
+      await queryRunner.release();
     }
   }
 

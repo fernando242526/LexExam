@@ -11,6 +11,8 @@ import { ResultadoExamenDto } from './dto/response-resultado-examen.dto';
 import { EnviarRespuestasDto } from './dto/enviar-respuesta.dto';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ExamenConPreguntasRespuestasDTO } from './dto/response-examen-con-preguntas-previas.dto';
+import { GuardarRespuestasParcialesDto } from './dto/guardar-respuestas-parciales.dto';
 
 @ApiTags('Exámenes')
 @UseGuards(JwtAuthGuard)
@@ -107,13 +109,13 @@ export class ExamenesController {
   @Get(':id/continuar')
   @ApiOperation({ 
     summary: 'Continuar examen', 
-    description: 'Continúa un examen ya iniciado y devuelve las preguntas' 
+    description: 'Continúa un examen ya iniciado y devuelve las preguntas junto con las respuestas previas' 
   })
   @ApiParam({ name: 'id', description: 'ID del examen' })
   @ApiResponse({ 
     status: HttpStatus.OK, 
     description: 'Datos del examen para continuar', 
-    type: ExamenConPreguntasDto 
+    type: ExamenConPreguntasRespuestasDTO 
   })
   @ApiResponse({ 
     status: HttpStatus.NOT_FOUND, 
@@ -126,8 +128,37 @@ export class ExamenesController {
   continuarExamen(
     @Param('id', ParseUUIDPipe) id: string,
     @GetUser('id') usuarioId: string
-  ): Promise<ExamenConPreguntasDto> {
+  ): Promise<ExamenConPreguntasRespuestasDTO> {
     return this.examenesService.continuarExamen(id, usuarioId);
+  }
+
+  @Post('guardar-respuestas-parciales')
+  @ApiOperation({ 
+    summary: 'Guardar respuestas parciales', 
+    description: 'Guarda las respuestas parciales de un examen sin finalizarlo' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'Respuestas guardadas exitosamente',
+    schema: {
+      properties: {
+        mensaje: { type: 'string' }
+      }
+    }
+  })
+  @ApiResponse({ 
+    status: HttpStatus.NOT_FOUND, 
+    description: 'Examen no encontrado' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.CONFLICT, 
+    description: 'El examen no está en estado INICIADO o el tiempo ha expirado' 
+  })
+  guardarRespuestasParciales(
+    @Body() dto: GuardarRespuestasParcialesDto,
+    @GetUser('id') usuarioId: string
+  ): Promise<{ mensaje: string }> {
+    return this.examenesService.guardarRespuestasParciales(dto, usuarioId);
   }
 
   @Post('enviar-respuestas')
