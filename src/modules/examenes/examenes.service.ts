@@ -91,8 +91,8 @@ export class ExamenesService {
     const skip = (page - 1) * limit;
 
     // Construir where según los filtros
-    const where: FindOptionsWhere<Examen> = { 
-      usuario: { id: usuarioId } 
+    const where: FindOptionsWhere<Examen> = {
+      usuario: { id: usuarioId },
     };
 
     if (temaId) {
@@ -256,22 +256,25 @@ export class ExamenesService {
       let preguntasAcertadas = 0;
 
       for (const respuestaDto of respuestas) {
-        // Obtener la respuesta original para verificar si es correcta
-        const respuesta = await queryRunner.manager.findOne(Respuesta, {
-          where: {
-            id: respuestaDto.respuestaId,
-            pregunta: { id: respuestaDto.preguntaId }
+        let respuesta: Respuesta | null = null;
+        let esCorrecta = false;
+
+        if (respuestaDto.respuestaId) {
+          respuesta = await queryRunner.manager.findOne(Respuesta, {
+            where: {
+              id: respuestaDto.respuestaId,
+              pregunta: { id: respuestaDto.preguntaId },
+            },
+          });
+
+          if (!respuesta) {
+            throw new BadRequestException(
+              `Respuesta con ID ${respuestaDto.respuestaId} no encontrada para la pregunta ${respuestaDto.preguntaId}`,
+            );
           }
-        });
 
-        if (!respuesta) {
-          throw new BadRequestException(
-            `Respuesta con ID ${respuestaDto.respuestaId} no encontrada para la pregunta ${respuestaDto.preguntaId}`,
-          );
+          esCorrecta = respuesta.esCorrecta;
         }
-
-        // Verificar si la respuesta es correcta
-        const esCorrecta = respuesta.esCorrecta;
 
         // Incrementar contador si es correcta
         if (esCorrecta) {
@@ -280,9 +283,9 @@ export class ExamenesService {
 
         // Guardar la respuesta del usuario
         const respuestaUsuario = this.respuestaUsuarioRepository.create({
-          resultadoExamen: { id: savedResultado.id },
+          resultadoExamen: savedResultado,
           pregunta: { id: respuestaDto.preguntaId },
-          respuesta: { id: respuestaDto.respuestaId },
+          respuesta: respuesta ? { id: respuesta.id } : null,
           esCorrecta,
           tiempoRespuesta: null, // No se registra el tiempo por pregunta en este caso
         });
@@ -321,7 +324,7 @@ export class ExamenesService {
         where: { id: savedResultado.id },
         relations: {
           examen: {
-            tema: true
+            tema: true,
           },
           usuario: true,
           respuestasUsuario: {
@@ -366,7 +369,7 @@ export class ExamenesService {
       where: { examen: { id: examenId }, usuario: { id: usuarioId } },
       relations: {
         examen: {
-          tema: true
+          tema: true,
         },
         usuario: true,
         respuestasUsuario: {
@@ -403,8 +406,8 @@ export class ExamenesService {
     const skip = (page - 1) * limit;
 
     // Construir where según los filtros
-    let where: any = { 
-      usuario: { id: usuarioId } 
+    let where: any = {
+      usuario: { id: usuarioId },
     };
 
     if (temaId) {
@@ -425,11 +428,11 @@ export class ExamenesService {
     // Ejecutar la consulta
     const [resultados, totalItems] = await this.resultadoExamenRepository.findAndCount({
       where,
-      relations: { 
+      relations: {
         examen: {
-          tema: true
+          tema: true,
         },
-        usuario: true
+        usuario: true,
       },
       order: { [sortBy || 'createdAt']: order || 'DESC' },
       skip,

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsUUID, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import { IsNotEmpty, IsUUID, IsArray, ValidateNested, ArrayMinSize, IsOptional } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class RespuestaExamenDto {
@@ -14,10 +14,11 @@ class RespuestaExamenDto {
   @ApiProperty({
     description: 'ID de la respuesta seleccionada',
     example: '123e4567-e89b-12d3-a456-426614174000',
+    nullable: true,
   })
-  @IsNotEmpty({ message: 'El ID de la respuesta es obligatorio' })
+  @IsOptional()
   @IsUUID('4', { message: 'El ID de la respuesta debe ser un UUID válido' })
-  respuestaId: string;
+  respuestaId: string | null;
 }
 
 export class EnviarRespuestasDto {

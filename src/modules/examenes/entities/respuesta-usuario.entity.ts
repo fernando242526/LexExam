@@ -38,7 +38,7 @@ export class RespuestaUsuario {
   pregunta: Pregunta;
 
   @ApiProperty({ description: 'Respuesta seleccionada', type: () => Respuesta })
-  @ManyToOne(() => Respuesta, (respuesta) => respuesta.respuestasUsuarios, { nullable: false })
+  @ManyToOne(() => Respuesta, (respuesta) => respuesta.respuestasUsuarios, { nullable: true })
   @JoinColumn({ name: 'respuesta_id' })
-  respuesta: Respuesta;
+  respuesta: Respuesta | null;
 }
