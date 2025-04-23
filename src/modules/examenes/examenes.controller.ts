@@ -104,6 +104,32 @@ export class ExamenesController {
     return this.examenesService.iniciarExamen(iniciarExamenDto, usuarioId);
   }
 
+  @Get(':id/continuar')
+  @ApiOperation({ 
+    summary: 'Continuar examen', 
+    description: 'Continúa un examen ya iniciado y devuelve las preguntas' 
+  })
+  @ApiParam({ name: 'id', description: 'ID del examen' })
+  @ApiResponse({ 
+    status: HttpStatus.OK, 
+    description: 'Datos del examen para continuar', 
+    type: ExamenConPreguntasDto 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.NOT_FOUND, 
+    description: 'Examen no encontrado' 
+  })
+  @ApiResponse({ 
+    status: HttpStatus.CONFLICT, 
+    description: 'El examen no está en estado INICIADO o ha caducado' 
+  })
+  continuarExamen(
+    @Param('id', ParseUUIDPipe) id: string,
+    @GetUser('id') usuarioId: string
+  ): Promise<ExamenConPreguntasDto> {
+    return this.examenesService.continuarExamen(id, usuarioId);
+  }
+
   @Post('enviar-respuestas')
   @ApiOperation({ 
     summary: 'Enviar respuestas', 

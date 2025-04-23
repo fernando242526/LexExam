@@ -25,9 +25,9 @@ export class PreguntasService {
     private dataSource: DataSource,
   ) {}
 
-  // /**
-  //  * Crea una nueva pregunta con sus respuestas
-  //  */
+  /**
+  * Crea una nueva pregunta con sus respuestas
+  */
   // async create(createPreguntaDto: CreatePreguntaDto): Promise<PreguntaDto> {
   //   // Verificar que al menos una respuesta sea marcada como correcta
   //   const tieneRespuestaCorrecta = createPreguntaDto.respuestas.some((r) => r.esCorrecta);
@@ -390,6 +390,35 @@ export class PreguntasService {
   //     await queryRunner.release();
   //   }
   // }
+
+  /**
+   * Obtiene preguntas por sus IDs
+   * Método utilizado para continuar un examen
+   */
+  async findPreguntasByIds(ids: string[]): Promise<PreguntaExamenDto[]> {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+    
+    // Obtener preguntas completas con respuestas
+    const preguntas = await this.preguntaRepository.find({
+      where: { id: In(ids), activo: true },
+      relations: ['respuestas'],
+    });
+
+    if (preguntas.length === 0) {
+      throw new BadRequestException(`No se encontraron preguntas activas con los IDs proporcionados`);
+    }
+
+    // Si faltan algunas preguntas, mostrar warning
+    if (preguntas.length < ids.length) {
+      const encontrados = preguntas.map(p => p.id);
+      const faltantes = ids.filter(id => !encontrados.includes(id));
+      console.warn(`No se encontraron todas las preguntas solicitadas. Faltan: ${faltantes.join(', ')}`);
+    }
+
+    return preguntas.map((pregunta) => new PreguntaExamenDto(pregunta));
+  }
 
   /**
    * Elimina una pregunta por su ID
