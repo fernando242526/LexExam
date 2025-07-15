@@ -31,6 +31,8 @@ import { EstadisticasService } from '../estadisticas/estadisticas.service';
 import { Respuesta } from '../preguntas/entities/respuesta.entity';
 import { ExamenConPreguntasRespuestasDTO } from './dto/response-examen-con-preguntas-previas.dto';
 import { GuardarRespuestasParcialesDto } from './dto/guardar-respuestas-parciales.dto';
+import { ExamenPregunta } from './entities/examen-pregunta.entity';
+import { PreguntaExamenDto } from '../preguntas/dto/response-pregunta-examen.dto';
 
 @Injectable()
 export class ExamenesService {
@@ -41,6 +43,8 @@ export class ExamenesService {
     private resultadoExamenRepository: Repository<ResultadoExamen>,
     @InjectRepository(RespuestaUsuario)
     private respuestaUsuarioRepository: Repository<RespuestaUsuario>,
+    @InjectRepository(ExamenPregunta)
+    private examenPreguntaRepository: Repository<ExamenPregunta>,
     private temasService: TemasService,
     private preguntasService: PreguntasService,
     private dataSource: DataSource,
@@ -164,37 +168,61 @@ export class ExamenesService {
     usuarioId: string,
   ): Promise<ExamenConPreguntasDto> {
     const { examenId } = iniciarExamenDto;
-
+  
     // Obtener el examen
     const examen = await this.examenRepository.findOne({
       where: { id: examenId, usuario: { id: usuarioId } },
       relations: { tema: true, usuario: true },
     });
-
+  
     if (!examen) {
       throw new NotFoundException(`Examen con ID ${examenId} no encontrado`);
     }
-
+  
     // Verificar que el examen esté en estado PENDIENTE
     if (examen.estado !== EstadoExamen.PENDIENTE) {
       throw new ConflictException(`El examen ya ha sido iniciado o finalizado`);
     }
-
+  
     // Obtener preguntas aleatorias para el examen
     const preguntas = await this.preguntasService.findRandomForExam(
       examen.tema.id,
       examen.numeroPreguntas,
     );
-
-    // Actualizar el estado del examen a INICIADO y registrar fecha de inicio
-    examen.estado = EstadoExamen.INICIADO;
-    examen.fechaInicio = new Date();
-    // Calcular fecha de finalización según la duración
-    examen.fechaFin = DateUtils.addMinutes(examen.fechaInicio, examen.duracionMinutos);
-
-    await this.examenRepository.save(examen);
-
-    return new ExamenConPreguntasDto(examen, preguntas);
+  
+    // Iniciar transacción
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+  
+    try {
+      // Actualizar el estado del examen a INICIADO y registrar fecha de inicio
+      examen.estado = EstadoExamen.INICIADO;
+      examen.fechaInicio = new Date();
+      // Calcular fecha de finalización según la duración
+      examen.fechaFin = DateUtils.addMinutes(examen.fechaInicio, examen.duracionMinutos);
+  
+      await queryRunner.manager.save(examen);
+  
+      // Guardar la relación de preguntas con su orden
+      for (let i = 0; i < preguntas.length; i++) {
+        const examenPregunta = queryRunner.manager.create(ExamenPregunta, {
+          examenId: examen.id,
+          preguntaId: preguntas[i].id,
+          orden: i + 1, // Empezamos desde 1 para mejor legibilidad
+        });
+        await queryRunner.manager.save(examenPregunta);
+      }
+  
+      await queryRunner.commitTransaction();
+      
+      return new ExamenConPreguntasDto(examen, preguntas);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
   }
 
   /**
@@ -209,11 +237,11 @@ export class ExamenesService {
       where: { id: examenId, usuario: { id: usuarioId } },
       relations: { tema: true, usuario: true },
     });
-
+  
     if (!examen) {
       throw new NotFoundException(`Examen con ID ${examenId} no encontrado`);
     }
-
+  
     // Verificar si el examen ha caducado
     const ahora = new Date();
     if (examen.fechaFin && ahora > examen.fechaFin) {
@@ -221,100 +249,54 @@ export class ExamenesService {
       await this.examenRepository.save(examen);
       throw new ConflictException('El tiempo para completar el examen ha expirado');
     }
-
+  
     // Verificar que el examen esté en estado INICIADO
     if (examen.estado !== EstadoExamen.INICIADO) {
       throw new ConflictException(
         `No se puede continuar el examen porque está en estado ${examen.estado}`,
       );
     }
-
+  
     // Buscar respuestas previas si existen
     const resultadoPrevio = await this.resultadoExamenRepository.findOne({
       where: { examen: { id: examenId } },
       relations: { respuestasUsuario: { pregunta: true, respuesta: true } },
     });
-
+  
     let respuestasUsuario: RespuestaUsuario[] = [];
-    let preguntasIds: string[] = [];
-
-    if (resultadoPrevio && resultadoPrevio.respuestasUsuario.length > 0) {
-      // Si hay un resultado previo, obtener las respuestas y las preguntas
-      respuestasUsuario = resultadoPrevio.respuestasUsuario;
-      preguntasIds = respuestasUsuario.map((ru) => ru.pregunta.id);
-    } else {
-      // Si no hay un resultado previo, obtener las preguntas basadas en exámenes similares
-      preguntasIds = await this.obtenerPreguntasDeExamen(examenId);
-
-      if (preguntasIds.length === 0) {
-        throw new BadRequestException('No se encontraron preguntas asociadas a este examen');
-      }
+  
+    // Buscar las preguntas del examen con su orden
+    const examenPreguntas = await this.examenPreguntaRepository.find({
+      where: { examen: { id: examenId } },
+      order: { orden: 'ASC' },
+    });
+  
+    if (examenPreguntas.length === 0) {
+      throw new BadRequestException('No se encontraron preguntas asociadas a este examen');
     }
-
+  
+    // Obtener los IDs de las preguntas en el orden correcto
+    const preguntasIds = examenPreguntas.map(ep => ep.preguntaId);
+  
+    if (resultadoPrevio && resultadoPrevio.respuestasUsuario.length > 0) {
+      // Si hay un resultado previo, obtener las respuestas
+      respuestasUsuario = resultadoPrevio.respuestasUsuario;
+    }
+  
     // Obtener las preguntas completas
     const preguntas = await this.preguntasService.findPreguntasByIds(preguntasIds);
-
-    // Ahora podemos usar el constructor actualizado que acepta ambos tipos
-    return new ExamenConPreguntasRespuestasDTO(examen, preguntas, respuestasUsuario);
-  }
-
-  /**
-   * Obtiene los IDs de las preguntas asignadas a un examen
-   * Este método se utiliza para la funcionalidad de continuar examen
-   */
-  private async obtenerPreguntasDeExamen(examenId: string): Promise<string[]> {
-    // Buscar si hay resultados previos (respuestas guardadas parciales)
-    const resultadoPrevio = await this.resultadoExamenRepository.findOne({
-      where: { examen: { id: examenId } },
-      relations: { respuestasUsuario: { pregunta: true } },
-    });
-
-    if (resultadoPrevio && resultadoPrevio.respuestasUsuario.length > 0) {
-      // Si hay un resultado previo, obtener las preguntas de ese resultado
-      return resultadoPrevio.respuestasUsuario.map((ru) => ru.pregunta.id);
-    } else {
-      // Si no hay un resultado previo, obtener las preguntas basadas en exámenes similares
-      // (mismo tema, mismo número de preguntas)
-      const examen = await this.examenRepository.findOne({
-        where: { id: examenId },
-        relations: { tema: true },
-      });
-
-      if (!examen) {
-        return [];
+  
+    // Reorganizar las preguntas según el orden guardado
+    const preguntasOrdenadas: PreguntaExamenDto[] = [];
+    for (const ep of examenPreguntas) {
+      const pregunta = preguntas.find(p => p.id === ep.preguntaId);
+      if (pregunta) {
+        preguntasOrdenadas.push(pregunta);
       }
-
-      // Buscar exámenes finalizados del mismo tema y con mismo número de preguntas
-      const examenesFinalizados = await this.examenRepository.find({
-        where: {
-          tema: { id: examen.tema.id },
-          numeroPreguntas: examen.numeroPreguntas,
-          estado: EstadoExamen.FINALIZADO,
-        },
-        take: 1, // Tomamos solo el más reciente
-        order: { fechaFin: 'DESC' },
-      });
-
-      if (examenesFinalizados.length > 0) {
-        const ultimoExamenFinalizado = examenesFinalizados[0];
-        const resultado = await this.resultadoExamenRepository.findOne({
-          where: { examen: { id: ultimoExamenFinalizado.id } },
-          relations: { respuestasUsuario: { pregunta: true } },
-        });
-
-        if (resultado && resultado.respuestasUsuario.length > 0) {
-          return resultado.respuestasUsuario.map((ru) => ru.pregunta.id);
-        }
-      }
-
-      // Si no encontramos preguntas de manera fácil, obtenemos nuevas preguntas aleatorias
-      const preguntasAleatorias = await this.preguntasService.findRandomForExam(
-        examen.tema.id,
-        examen.numeroPreguntas,
-      );
-
-      return preguntasAleatorias.map((p) => p.id);
     }
+  
+    // Ahora podemos usar el constructor actualizado que acepta ambos tipos
+    return new ExamenConPreguntasRespuestasDTO(examen, preguntasOrdenadas, respuestasUsuario);
   }
 
   /**
@@ -603,11 +585,11 @@ export class ExamenesService {
     const examen = await this.examenRepository.findOne({
       where: { id: examenId, usuario: { id: usuarioId } },
     });
-
+  
     if (!examen) {
       throw new NotFoundException(`Examen con ID ${examenId} no encontrado`);
     }
-
+  
     // Obtener el resultado del examen con todas sus relaciones
     const resultado = await this.resultadoExamenRepository.findOne({
       where: { examen: { id: examenId }, usuario: { id: usuarioId } },
@@ -623,19 +605,33 @@ export class ExamenesService {
           respuesta: true,
         },
       },
-      order: {
-        respuestasUsuario: {
-          pregunta: {
-            texto: 'ASC',
-          },
-        },
-      },
     });
-
+  
     if (!resultado) {
       throw new NotFoundException(`Resultado para el examen con ID ${examenId} no encontrado`);
     }
-
+  
+    // Obtener el orden de las preguntas para este examen
+    const examenPreguntas = await this.examenPreguntaRepository.find({
+      where: { examen: { id: examenId } },
+      order: { orden: 'ASC' },
+    });
+  
+    // Crear un mapa de ID de pregunta a orden
+    const ordenPreguntaMap = new Map();
+    examenPreguntas.forEach(ep => {
+      ordenPreguntaMap.set(ep.preguntaId, ep.orden); // Usar preguntaId en lugar de pregunta.id
+    });
+  
+    // Ordenar las respuestas según el orden de las preguntas
+    if (resultado.respuestasUsuario) {
+      resultado.respuestasUsuario.sort((a, b) => {
+        const ordenA = ordenPreguntaMap.get(a.pregunta.id) || 0;
+        const ordenB = ordenPreguntaMap.get(b.pregunta.id) || 0;
+        return ordenA - ordenB;
+      });
+    }
+  
     return new ResultadoExamenDto(resultado);
   }
 

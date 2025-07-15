@@ -3,6 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Tema } from '../../temas/entities/tema.entity';
 import { Usuario } from '../../usuarios/entities/usuario.entity';
 import { ResultadoExamen } from './resultado-examen.entity';
+import { ExamenPregunta } from './examen-pregunta.entity';
 
 export enum EstadoExamen {
   PENDIENTE = 'pendiente',
@@ -67,4 +68,7 @@ export class Examen {
   @ApiProperty({ description: 'Resultados del examen', type: () => [ResultadoExamen] })
   @OneToMany(() => ResultadoExamen, (resultadoExamen) => resultadoExamen.examen)
   resultados: ResultadoExamen[];
+
+  @OneToMany(() => ExamenPregunta, (examenPregunta) => examenPregunta.examen)
+  examenPreguntas: ExamenPregunta[];
 }

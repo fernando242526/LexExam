@@ -9,10 +9,11 @@ import { ExamenesController } from './examenes.controller';
 import { ExamenesService } from './examenes.service';
 import { EstadisticasModule } from '../estadisticas/estadisticas.module';
 import { AuthModule } from '../auth/auth.module';
+import { ExamenPregunta } from './entities/examen-pregunta.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Examen, ResultadoExamen, RespuestaUsuario]),
+    TypeOrmModule.forFeature([Examen, ResultadoExamen, RespuestaUsuario, ExamenPregunta]),
     TemasModule,
     PreguntasModule,
     EstadisticasModule, // Importa el módulo de estadísticas para usar su servicio
